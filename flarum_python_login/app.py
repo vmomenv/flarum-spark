@@ -144,17 +144,23 @@ DASHBOARD_TEMPLATE = """
             padding: 30px;
             text-align: center;
         }
-        .avatar {
+        .avatar-img {
             width: 100px;
             height: 100px;
-            background: #e9ecef;
             border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            color: #6c757d;
+            object-fit: cover;
             margin-bottom: 20px;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .group-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            margin: 2px;
         }
     </style>
 </head>
@@ -175,10 +181,27 @@ DASHBOARD_TEMPLATE = """
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <div class="profile-card">
-                    <div class="avatar">
-                        {{ username[0]|upper }}
-                    </div>
+                    {% if avatar_url %}
+                        <img src="{{ avatar_url }}" class="avatar-img" alt="Avatar">
+                    {% else %}
+                        <div class="avatar">
+                            {{ username[0]|upper }}
+                        </div>
+                    {% endif %}
+                    
                     <h3>Welcome, {{ username }}!</h3>
+                    
+                    <div class="mb-3">
+                        {% for group in groups %}
+                            <span class="group-badge" style="background-color: {{ group.color or '#6c757d' }}">
+                                {% if group.icon %}
+                                    <i class="{{ group.icon }}"></i>
+                                {% endif %}
+                                {{ group.name }}
+                            </span>
+                        {% endfor %}
+                    </div>
+
                     <p class="text-muted">You have successfully authenticated via Flarum.</p>
                     <hr>
                     <div class="text-start mt-4">
@@ -231,6 +254,46 @@ def verify_flarum_credentials(username, password):
             "message": f"Connection error to Flarum: {str(e)}"
         }
 
+def get_flarum_user_details(user_id, token):
+    """
+    Fetches detailed user information including avatar and groups.
+    """
+    url = f"{FLARUM_URL}/api/users/{user_id}?include=groups"
+    headers = {
+        "Authorization": f"Token {token}"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            user_data = data.get("data", {})
+            attributes = user_data.get("attributes", {})
+            
+            # Extract avatar
+            avatar_url = attributes.get("avatarUrl")
+            
+            # Extract groups from included section
+            groups = []
+            included = data.get("included", [])
+            for item in included:
+                if item.get("type") == "groups":
+                    group_attrs = item.get("attributes", {})
+                    groups.append({
+                        "name": group_attrs.get("nameSingular"),
+                        "color": group_attrs.get("color"),
+                        "icon": group_attrs.get("icon")
+                    })
+            
+            return {
+                "avatar_url": avatar_url,
+                "groups": groups
+            }
+    except Exception as e:
+        print(f"Error fetching user details: {e}")
+    
+    return {"avatar_url": None, "groups": []}
+
 @app.route('/')
 def home():
     if 'user_id' in session:
@@ -256,10 +319,15 @@ def login_process():
     result = verify_flarum_credentials(username, password)
     
     if result['success']:
-        # Store user info in session
+        # Store basic user info
         session['user_id'] = result['user_id']
         session['username'] = username
         session['flarum_token'] = result['token']
+        
+        # Fetch detailed info (avatar, groups)
+        details = get_flarum_user_details(result['user_id'], result['token'])
+        session['avatar_url'] = details['avatar_url']
+        session['groups'] = details['groups']
         
         flash('Successfully logged in!', 'success')
         return redirect(url_for('dashboard'))
@@ -278,6 +346,8 @@ def dashboard():
         username=session.get('username'),
         user_id=session.get('user_id'),
         token=session.get('flarum_token'),
+        avatar_url=session.get('avatar_url'),
+        groups=session.get('groups'),
         flarum_url=FLARUM_URL
     )
 
