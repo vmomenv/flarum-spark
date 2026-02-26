@@ -1,6 +1,8 @@
 from flask import Flask, render_template_string, request, session, redirect, url_for, flash
 import requests
 import secrets
+import sqlite3
+from datetime import datetime
 
 app = Flask(__name__)
 # Generate a random secret key for session management
@@ -8,6 +10,23 @@ app.secret_key = secrets.token_hex(16)
 
 # Your Flarum forum URL
 FLARUM_URL = "https://bbs.spark-app.store"
+DATABASE = 'guestbook.db'
+
+def init_db():
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                username TEXT NOT NULL,
+                avatar_url TEXT,
+                content TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+    print("Database initialized.")
+
+init_db()
 
 # HTML Templates encoded as strings for simplicity
 LOGIN_TEMPLATE = """
@@ -167,7 +186,7 @@ DASHBOARD_TEMPLATE = """
 <body>
     <nav class="navbar navbar-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="#">Python App Dashboard</a>
+            <a class="navbar-brand" href="#">Flarum Message Board</a>
             <div class="d-flex">
                 <span class="navbar-text text-white me-3">
                     Hello, {{ username }}
@@ -178,42 +197,89 @@ DASHBOARD_TEMPLATE = """
     </nav>
 
     <div class="container dashboard-content">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="profile-card">
+        <div class="row">
+            <!-- Sidebar: Profile Card -->
+            <div class="col-md-4">
+                <div class="profile-card mb-4 shadow">
                     {% if avatar_url %}
                         <img src="{{ avatar_url }}" class="avatar-img" alt="Avatar">
                     {% else %}
-                        <div class="avatar">
+                        <div class="avatar-img bg-primary d-flex align-items-center justify-content-center text-white fs-1 mx-auto" style="width: 100px; height: 100px; border-radius: 50%;">
                             {{ username[0]|upper }}
                         </div>
                     {% endif %}
                     
-                    <h3>Welcome, {{ username }}!</h3>
+                    <h3 class="mt-3">{{ username }}</h3>
                     
                     <div class="mb-3">
                         {% for group in groups %}
                             <span class="group-badge" style="background-color: {{ group.color or '#6c757d' }}">
-                                {% if group.icon %}
-                                    <i class="{{ group.icon }}"></i>
-                                {% endif %}
                                 {{ group.name }}
                             </span>
                         {% endfor %}
                     </div>
 
-                    <p class="text-muted">You have successfully authenticated via Flarum.</p>
                     <hr>
-                    <div class="text-start mt-4">
-                        <p><strong>Your Flarum User ID:</strong> <span class="badge bg-primary">{{ user_id }}</span></p>
-                        <p><strong>Session Token:</strong></p>
-                        <code class="d-block bg-light p-3 rounded" style="word-break: break-all;">
-                            {{ token }}
-                        </code>
+                    <div class="text-start mt-3 small">
+                        <p><strong>Flarum User ID:</strong> <span class="badge bg-secondary">{{ user_id }}</span></p>
+                        <p class="text-muted">Authenticated via bbs.spark-app.store</p>
                     </div>
-                    <div class="mt-4">
-                        <a href="{{ flarum_url }}" target="_blank" class="btn btn-primary">Go to Community</a>
+                </div>
+            </div>
+
+            <!-- Main Content: Message Board -->
+            <div class="col-md-8">
+                <div class="card shadow mb-4 border-0">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-4">Leave a message</h5>
+                        <form action="/post_message" method="POST">
+                            <div class="mb-3">
+                                <textarea name="content" class="form-control border-0 bg-light" rows="3" placeholder="Write something..." required style="resize: none;"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary px-4 fw-bold" style="border-radius: 10px;">Post Message</button>
+                        </form>
                     </div>
+                </div>
+
+                <div class="messages-list">
+                    <h5 class="mb-4 d-flex align-items-center">
+                        Recent Messages 
+                        <span class="badge bg-primary ms-2 rounded-pill fs-6">{{ messages|length }}</span>
+                    </h5>
+                    
+                    {% for msg in messages %}
+                        <div class="card shadow-sm mb-3 border-0" style="border-radius: 15px;">
+                            <div class="card-body p-3">
+                                <div class="d-flex">
+                                    <div class="me-3">
+                                        {% if msg.avatar_url %}
+                                            <img src="{{ msg.avatar_url }}" width="50" height="50" class="rounded-circle shadow-sm" alt="Avatar">
+                                        {% else %}
+                                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white shadow-sm" style="width: 50px; height: 50px; font-weight: bold;">
+                                                {{ msg.username[0]|upper }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0 fw-bold">{{ msg.username }}</h6>
+                                            <small class="text-muted">{{ msg.timestamp }}</small>
+                                        </div>
+                                        <div class="mt-2 text-dark" style="word-break: break-word; line-height: 1.5;">
+                                            {{ msg.content }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    {% if not messages %}
+                        <div class="text-center text-muted p-5 bg-white rounded shadow-sm">
+                            <i class="fs-1 mb-3 d-block">💬</i>
+                            No messages yet. Be the first to share your thoughts!
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -340,6 +406,13 @@ def dashboard():
     # Keep user logged out if no session exists
     if 'user_id' not in session:
         return redirect(url_for('login_page'))
+    
+    # Fetch messages from database
+    with sqlite3.connect(DATABASE) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC')
+        messages = cursor.fetchall()
         
     return render_template_string(
         DASHBOARD_TEMPLATE,
@@ -348,8 +421,29 @@ def dashboard():
         token=session.get('flarum_token'),
         avatar_url=session.get('avatar_url'),
         groups=session.get('groups'),
-        flarum_url=FLARUM_URL
+        flarum_url=FLARUM_URL,
+        messages=messages
     )
+
+@app.route('/post_message', methods=['POST'])
+def post_message():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    
+    content = request.form.get('content')
+    if not content:
+        flash('Message content cannot be empty', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Store message in database
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute(
+            'INSERT INTO messages (user_id, username, avatar_url, content) VALUES (?, ?, ?, ?)',
+            (session['user_id'], session['username'], session['avatar_url'], content)
+        )
+    
+    flash('Message posted successfully!', 'success')
+    return redirect(url_for('dashboard'))
 
 @app.route('/logout')
 def logout():
