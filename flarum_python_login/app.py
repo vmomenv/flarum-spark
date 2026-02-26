@@ -29,147 +29,41 @@ def init_db():
 init_db()
 
 # HTML Templates encoded as strings for simplicity
-LOGIN_TEMPLATE = """
+HOME_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login with Flarum</title>
+    <title>Flarum Guestbook</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: #f0f2f5;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .login-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-            padding: 40px;
-            width: 100%;
-            max-width: 400px;
-            transition: transform 0.3s;
-        }
-        .login-card:hover {
-            transform: translateY(-5px);
-        }
-        .brand-logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .brand-logo h2 {
-            color: #333;
-            font-weight: 700;
-        }
-        .form-control {
-            border-radius: 10px;
-            padding: 12px 15px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-        }
-        .form-control:focus {
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
-            border-color: #667eea;
-        }
-        .btn-login {
-            background: linear-gradient(to right, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 12px;
-            width: 100%;
-            font-weight: 600;
-            font-size: 16px;
-            transition: opacity 0.3s;
-        }
-        .btn-login:hover {
-            opacity: 0.9;
-            color: white;
-        }
-        .flarum-tag {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-card">
-        <div class="brand-logo">
-            <h2>Welcome Back</h2>
-            <p class="text-muted">Sign in with your community account</p>
-        </div>
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <form method="POST" action="/login">
-            <div class="form-group">
-                <input type="text" class="form-control" name="username" placeholder="Username or Email" required>
-            </div>
-            <div class="form-group">
-                <input type="password" class="form-control" name="password" placeholder="Password" required>
-            </div>
-            <button type="submit" class="btn btn-login">Sign In</button>
-        </form>
-        
-        <div class="flarum-tag">
-            Powered by <a href="{{ flarum_url }}" target="_blank">Flarum Authentication</a>
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
-"""
-
-DASHBOARD_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
         }
         .navbar {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .dashboard-content {
-            margin-top: 50px;
-        }
-        .profile-card {
+        .profile-card, .login-card {
             background: white;
             border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            padding: 2.5rem;
             text-align: center;
+            border: none;
         }
         .avatar-img {
             width: 100px;
             height: 100px;
             border-radius: 50%;
             object-fit: cover;
-            margin-bottom: 20px;
-            border: 3px solid #fff;
+            margin-bottom: 1.5rem;
+            border: 4px solid #fff;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         .group-badge {
@@ -181,75 +75,113 @@ DASHBOARD_TEMPLATE = """
             color: white;
             margin: 2px;
         }
+        .message-card {
+            border: none;
+            border-radius: 12px;
+            transition: transform 0.2s;
+            margin-bottom: 1rem;
+        }
+        .message-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+        }
+        .btn-primary {
+            background: linear-gradient(to right, #667eea, #764ba2);
+            border: none;
+            border-radius: 10px;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+        }
+        .form-control {
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            padding: 0.8rem 1rem;
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark shadow-sm">
-        <div class="container">
-            <a class="navbar-brand" href="#">Flarum Message Board</a>
-            <div class="d-flex">
-                <span class="navbar-text text-white me-3">
-                    Hello, {{ username }}
-                </span>
-                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+    <nav class="navbar navbar-dark">
+        <div class="container d-flex justify-content-between">
+            <a class="navbar-brand fw-bold" href="/">💬 Community Guestbook</a>
+            {% if session.user_id %}
+            <div class="d-flex align-items-center">
+                <span class="text-white me-3 d-none d-sm-inline">Logged in as <strong>{{ session.username }}</strong></span>
+                <a href="/logout" class="btn btn-outline-light btn-sm rounded-pill px-3">Logout</a>
             </div>
+            {% endif %}
         </div>
     </nav>
 
-    <div class="container dashboard-content">
-        <div class="row">
-            <!-- Sidebar: Profile Card -->
-            <div class="col-md-4">
-                <div class="profile-card mb-4 shadow">
-                    {% if avatar_url %}
-                        <img src="{{ avatar_url }}" class="avatar-img" alt="Avatar">
+    <div class="container pb-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show mb-4 rounded-3" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row g-4">
+            <!-- Sidebar: User Info or Login -->
+            <div class="col-lg-4 order-lg-2">
+                <div class="sticky-top" style="top: 2rem; z-index: 100;">
+                    {% if session.user_id %}
+                        <!-- Authenticated User Profile -->
+                        <div class="profile-card">
+                            {% if session.avatar_url %}
+                                <img src="{{ session.avatar_url }}" class="avatar-img" alt="Avatar">
+                            {% else %}
+                                <div class="avatar-img bg-primary d-flex align-items-center justify-content-center text-white fs-1 mx-auto">
+                                    {{ session.username[0]|upper }}
+                                </div>
+                            {% endif %}
+                            <h3 class="mb-1 fw-bold">{{ session.username }}</h3>
+                            <div class="mb-3">
+                                {% for group in session.groups %}
+                                    <span class="group-badge" style="background-color: {{ group.color or '#6c757d' }}">
+                                        {{ group.name }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                            <hr class="my-4">
+                            <h5 class="text-start mb-3">Post a Message</h5>
+                            <form action="/post_message" method="POST">
+                                <textarea name="content" class="form-control mb-3" rows="4" placeholder="What would you like to say?" required></textarea>
+                                <button type="submit" class="btn btn-primary w-100 shadow-sm">Post to Guestbook</button>
+                            </form>
+                        </div>
                     {% else %}
-                        <div class="avatar-img bg-primary d-flex align-items-center justify-content-center text-white fs-1 mx-auto" style="width: 100px; height: 100px; border-radius: 50%;">
-                            {{ username[0]|upper }}
+                        <!-- Login Form for Guests -->
+                        <div class="login-card">
+                            <h3 class="fw-bold mb-3">Join the convo</h3>
+                            <p class="text-muted mb-4">Log in with your community account to post a message</p>
+                            <form action="/login" method="POST">
+                                <input type="text" name="username" class="form-control mb-3" placeholder="Username or Email" required>
+                                <input type="password" name="password" class="form-control mb-4" placeholder="Password" required>
+                                <button type="submit" class="btn btn-primary w-100 mb-3 shadow-sm">Sign In</button>
+                            </form>
+                            <div class="small text-muted">
+                                Powered by <a href="{{ flarum_url }}" target="_blank" class="text-decoration-none">Flarum Auth</a>
+                            </div>
                         </div>
                     {% endif %}
-                    
-                    <h3 class="mt-3">{{ username }}</h3>
-                    
-                    <div class="mb-3">
-                        {% for group in groups %}
-                            <span class="group-badge" style="background-color: {{ group.color or '#6c757d' }}">
-                                {{ group.name }}
-                            </span>
-                        {% endfor %}
-                    </div>
-
-                    <hr>
-                    <div class="text-start mt-3 small">
-                        <p><strong>Flarum User ID:</strong> <span class="badge bg-secondary">{{ user_id }}</span></p>
-                        <p class="text-muted">Authenticated via bbs.spark-app.store</p>
-                    </div>
                 </div>
             </div>
 
             <!-- Main Content: Message Board -->
-            <div class="col-md-8">
-                <div class="card shadow mb-4 border-0">
-                    <div class="card-body p-4">
-                        <h5 class="card-title mb-4">Leave a message</h5>
-                        <form action="/post_message" method="POST">
-                            <div class="mb-3">
-                                <textarea name="content" class="form-control border-0 bg-light" rows="3" placeholder="Write something..." required style="resize: none;"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary px-4 fw-bold" style="border-radius: 10px;">Post Message</button>
-                        </form>
-                    </div>
+            <div class="col-lg-8 order-lg-1">
+                <div class="d-flex align-items-center mb-4">
+                    <h2 class="fw-bold mb-0">Recent Activity</h2>
+                    <span class="badge bg-white shadow-sm text-primary ms-3 rounded-pill px-3 py-2 fs-6 border">{{ message_list|length }} messages</span>
                 </div>
 
                 <div class="messages-list">
-                    <h5 class="mb-4 d-flex align-items-center">
-                        Recent Messages 
-                        <span class="badge bg-primary ms-2 rounded-pill fs-6">{{ messages|length }}</span>
-                    </h5>
-                    
-                    {% for msg in messages %}
-                        <div class="card shadow-sm mb-3 border-0" style="border-radius: 15px;">
-                            <div class="card-body p-3">
+                    {% for msg in message_list %}
+                        <div class="card message-card shadow-sm">
+                            <div class="card-body p-4">
                                 <div class="d-flex">
                                     <div class="me-3">
                                         {% if msg.avatar_url %}
@@ -261,32 +193,36 @@ DASHBOARD_TEMPLATE = """
                                         {% endif %}
                                     </div>
                                     <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-0 fw-bold">{{ msg.username }}</h6>
-                                            <small class="text-muted">{{ msg.timestamp }}</small>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-0 fw-bold fs-5">{{ msg.username }}</h6>
+                                                <small class="text-muted">{{ msg.timestamp }}</small>
+                                            </div>
                                         </div>
-                                        <div class="mt-2 text-dark" style="word-break: break-word; line-height: 1.5;">
-                                            {{ msg.content }}
-                                        </div>
+                                        <div class="mt-3 text-dark fs-5" style="white-space: pre-wrap; word-break: break-all;">{{ msg.content }}</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     {% endfor %}
                     
-                    {% if not messages %}
-                        <div class="text-center text-muted p-5 bg-white rounded shadow-sm">
-                            <i class="fs-1 mb-3 d-block">💬</i>
-                            No messages yet. Be the first to share your thoughts!
+                    {% if not message_list %}
+                        <div class="text-center py-5 bg-white rounded-4 shadow-sm">
+                            <div class="fs-1 mb-3">🌿</div>
+                            <h4 class="text-muted">It's quiet here...</h4>
+                            <p class="text-muted">No messages yet. Be the first to start the conversation!</p>
                         </div>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
 """
+
 
 def verify_flarum_credentials(username, password):
     """
@@ -362,15 +298,18 @@ def get_flarum_user_details(user_id, token):
 
 @app.route('/')
 def home():
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('login_page'))
-
-@app.route('/login', methods=['GET'])
-def login_page():
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))
-    return render_template_string(LOGIN_TEMPLATE, flarum_url=FLARUM_URL)
+    # Fetch messages from database
+    with sqlite3.connect(DATABASE) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC')
+        messages = cursor.fetchall()
+        
+    return render_template_string(
+        HOME_TEMPLATE,
+        flarum_url=FLARUM_URL,
+        message_list=messages
+    )
 
 @app.route('/login', methods=['POST'])
 def login_process():
@@ -379,7 +318,7 @@ def login_process():
     
     if not username or not password:
         flash('Username and password are required', 'error')
-        return redirect(url_for('login_page'))
+        return redirect(url_for('home'))
         
     # Verify with Flarum
     result = verify_flarum_credentials(username, password)
@@ -396,44 +335,21 @@ def login_process():
         session['groups'] = details['groups']
         
         flash('Successfully logged in!', 'success')
-        return redirect(url_for('dashboard'))
     else:
         flash(result['message'], 'error')
-        return redirect(url_for('login_page'))
-
-@app.route('/dashboard')
-def dashboard():
-    # Keep user logged out if no session exists
-    if 'user_id' not in session:
-        return redirect(url_for('login_page'))
-    
-    # Fetch messages from database
-    with sqlite3.connect(DATABASE) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC')
-        messages = cursor.fetchall()
         
-    return render_template_string(
-        DASHBOARD_TEMPLATE,
-        username=session.get('username'),
-        user_id=session.get('user_id'),
-        token=session.get('flarum_token'),
-        avatar_url=session.get('avatar_url'),
-        groups=session.get('groups'),
-        flarum_url=FLARUM_URL,
-        messages=messages
-    )
+    return redirect(url_for('home'))
 
 @app.route('/post_message', methods=['POST'])
 def post_message():
     if 'user_id' not in session:
-        return redirect(url_for('login_page'))
+        flash('Please login to post a message', 'error')
+        return redirect(url_for('home'))
     
     content = request.form.get('content')
     if not content:
         flash('Message content cannot be empty', 'error')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('home'))
     
     # Store message in database
     with sqlite3.connect(DATABASE) as conn:
@@ -443,13 +359,13 @@ def post_message():
         )
     
     flash('Message posted successfully!', 'success')
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('home'))
 
 @app.route('/logout')
 def logout():
     session.clear()
     flash('You have been logged out.', 'success')
-    return redirect(url_for('login_page'))
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
     print(f"Starting Flarum Auth Integration App...")
